@@ -1,11 +1,34 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rps</title>
-</head>
-<body>
-    <h1>Pruebas</h1>
-</body>
-</html>
+{% extends 'plantilla.html' %}  
+{% load static %}
+
+
+
+
+
+{% block contenido %}
+    
+
+
+    {%for rifa in Rifas %}
+        <a href="{% url 'rifa_selec' rifa.id_rifa %}" class="text-decoration-none">
+            <div class="card" style="margin-top:100px; margin-left: 25px; margin-right: 25px;">
+                <div class="card-body">
+                    <h5 class="card-title">{{rifa.Nom_rifa}}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{rifa.fecha_creacion}}</h6>
+                    <p class="card-text">{{rifa.id_rifa}}</p>
+                    <p class="card-text">Cantidad: {{rifa.cant_tickets}}</p>
+                    
+                </div>
+            </div>
+        </a>
+
+
+    {% endfor%}
+
+    
+    
+        
+
+
+
+{% endblock contenido%}

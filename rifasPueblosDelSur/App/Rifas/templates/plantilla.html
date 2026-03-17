@@ -1,0 +1,241 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://getbootstrap.com/docs/5.3/assets/css/docs.css" rel="stylesheet">
+    <title>Rps</title>
+    <!-- Bootstrap CSS -->
+     <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <link rel="stylesheet" href="{% static 'css/style.css' %}"/>
+</head>
+
+
+<body>
+
+    <nav class="navbar bg-body-tertiary fixed-top">
+        <div class="container-fluid">
+            <button class="btn btn-dark" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="" aria-label="Toggle navigation">
+                ☰
+            </button>
+
+            <div class="offcanvas  offcanvas-start  bg-dark" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+                <div class="offcanvas-header bg-dark">
+                    <button  class="btn btn-dark" type="button"  data-bs-dismiss="offcanvas">☰</button>
+                    <h5 class="offcanvas-title text-white" id="offcanvasNavbarLabel">Rifas</h5>
+                </div>
+
+                <div class="offcanvas-body bg-secondary-bs">
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" aria-current="page" href="{% url 'inicio_rifa' %}">Rifas</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Agregar rifas</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </nav>
+
+
+    <main>
+        
+        {% block contenido %}{% endblock contenido%}
+        
+    </main>
+
+    <script>
+
+        function enviarDatos(buttonElement,idRifa, comprado,numero ) {
+            
+            // Si YA está seleccionado → lo deseleccionamos
+            if (buttonElement.classList.contains('seleccionado')) {
+                buttonElement.classList.remove('seleccionado');
+                buttonElement.classList.remove('btn-secondary');
+                buttonElement.classList.add('btn-success'); // color original
+                document.getElementById('ticket-seleccionado').textContent = "";
+                return;
+            }
+
+            // Si NO está seleccionado → lo seleccionamos
+            buttonElement.classList.add('seleccionado');
+            buttonElement.classList.remove('btn-success');
+            buttonElement.classList.add('btn-secondary');
+
+            document.getElementById('ticket-seleccionado').textContent = numero;
+            document.getElementById('ticket_seleccionado_input').value = idRifa;
+        }
+
+        function mostrarInfoTicket(buttonElement, idTicket, numero, nombre, cedula, telefono, direccion, totalPagado, deuda, comprado) {
+            // Llenar el modal con la información del ticket
+            document.getElementById('modal-ticket-numero').textContent = numero;
+            document.getElementById('modal-nombre').textContent = nombre;
+            document.getElementById('modal-cedula').textContent = cedula;
+            document.getElementById('modal-telefono').textContent = telefono;
+            document.getElementById('modal-direccion').textContent = direccion;
+            document.getElementById('modal-total-pagado').textContent = totalPagado || '0.00';
+            document.getElementById('modal-deuda').textContent = deuda || '0.00';
+            
+            // Actualizar estado
+            const estadoElement = document.getElementById('modal-estado');
+            //if (parseFloat(deuda) > 0) {
+            //    estadoElement.textContent = 'Abonado';
+            //    estadoElement.className = 'badge bg-warning';
+            //} else {
+             //   estadoElement.textContent = 'Pagado';
+             //   estadoElement.className = 'badge bg-success';
+            //}
+
+            if(comprado === 'True'){
+                estadoElement.textContent = 'Pagado';
+                estadoElement.className = 'badge bg-success';
+            } else {
+                estadoElement.textContent = 'No Pagado';
+                estadoElement.className = 'badge bg-danger';
+            }
+            
+            // Cargar transacciones del ticket (esto requeriría una llamada AJAX)
+            cargarTransacciones(idTicket,'modal-transacciones');
+            
+            // Mostrar el modal
+            const modal = new bootstrap.Modal(document.getElementById('infoTicketModal'));
+            modal.show();
+        }
+
+        function mostrarFormularioAbono(buttonElement, idTicket, numero, nombre, cedula, telefono, direccion, totalPagado, deuda, comprado) {
+            
+        
+
+
+            // Llenar el modal con la información del ticket
+            document.getElementById('modalAbono-ticket-numero').textContent = numero;
+            document.getElementById('modalAbono-nombre').textContent = nombre;
+            document.getElementById('modalAbono-cedula').textContent = cedula;
+            document.getElementById('modalAbono-telefono').textContent = telefono;
+            document.getElementById('modalAbono-direccion').textContent = direccion;
+            document.getElementById('modalAbono-total-pagado').textContent = totalPagado || '0.00';
+            document.getElementById('modalAbono-deuda').textContent = deuda || '0.00';
+            document.getElementById('abono_ticket_id').value = idTicket;
+
+            // Actualizar estado
+            const estadoElement = document.getElementById('modalAbono-estado');
+
+            if(comprado === 'True'){
+                estadoElement.textContent = 'Pagado';
+                estadoElement.className = 'badge bg-success';
+            } else {
+                estadoElement.textContent = 'Abonado';
+                estadoElement.className = 'badge bg-warning';
+            }
+
+             // Cargar transacciones del ticket (esto requeriría una llamada AJAX)
+            cargarTransacciones(idTicket,'modalAbono-transacciones');
+
+            // Mostrar el modal
+            const modal = new bootstrap.Modal(document.getElementById('abonoModal'));
+            modal.show();
+        }
+
+
+        function cargarTransacciones(idTicket,modal) {
+            // Aquí haríamos una llamada AJAX para obtener las transacciones
+            // Por ahora, mostramos un mensaje
+            document.getElementById(modal).innerHTML = 
+                '<p class="text-muted">Cargando transacciones...</p>';
+            
+            // Simulación de carga de transacciones (reemplaza con AJAX real)
+            fetch(`{% url 'transacciones_ticket' 0 %}`.replace('0', idTicket))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        let html = '<ul class="list-group">';
+                        data.forEach(trans => {
+                            html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">${trans.fecha}</small><br>
+                                    <strong>Id:</strong> ${trans.id}<br>
+                                    <strong>${trans.tipo_abono}</strong> - $${trans.monto}
+                                </div>
+                                <span class="badge bg-primary">${trans.metodo_pago}</span>
+                            </li>`;
+                        });
+                        html += '</ul>';
+                        document.getElementById(modal).innerHTML = html;
+                    } else {
+                        document.getElementById(modal).innerHTML = 
+                            '<p class="text-muted">No hay transacciones registradas.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('modal-transacciones').innerHTML = 
+                        '<p class="text-muted">Error al cargar transacciones.</p>';
+                });
+        }
+
+        
+
+        
+
+        function enviarAbono() {
+            const form = document.getElementById('form-abono');
+            const formData = new FormData(form);
+            
+            // Validar que el monto sea válido
+            const monto = parseFloat(formData.get('monto'));
+            if (isNaN(monto) || monto <= 0) {
+                alert('Por favor ingrese un monto válido mayor a 0');
+                return;
+            }
+            
+            // Validar que el monto no exceda la deuda
+            const deudaRestante = parseFloat(document.getElementById('modalAbono-deuda').textContent);
+            if (monto > deudaRestante) {
+                alert('El monto del abono no puede ser mayor a la deuda restante');
+                return;
+            }
+            
+            // Mostrar indicador de carga
+            const submitBtn = document.querySelector('#abonoModal .btn-primary');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Procesando...';
+            submitBtn.disabled = true;
+            
+            // Enviar el formulario
+            fetch('{% url "crear_transaccion" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Cerrar modal y recargar página
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('abonoModal'));
+                    modal.hide();
+                    location.reload();
+                } else {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al procesar el abono. Intente nuevamente.');
+                // Restaurar botón
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        }
+
+
+    </script>
+</body>
+</html>

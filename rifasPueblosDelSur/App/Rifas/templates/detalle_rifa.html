@@ -1,0 +1,237 @@
+{% extends 'plantilla.html' %} 
+
+
+{% block contenido %}
+
+    
+    <div class="main-content">
+
+        <h2 class="text-center mb-4">Listado de Rifas</h2>
+
+        <div class="row g-1 rifas-container">
+            {%for i in tickets %}
+                <div class="">
+                    {% if i.comprado %}
+                       <button onclick="mostrarInfoTicket(this, '{{i.id_Ticket}}', '{{i.numero}}', '{{i.id_Comprador.nom_Apellidos_com}}', '{{i.id_Comprador.cedula}}', '{{i.id_Comprador.telefono}}', '{{i.id_Comprador.direccion}}', '{{i.total_Pagado}}', '{{i.deuda}}','{{i.comprado}}')" class="btn btn-light btn-mini w-100" id="ticket-{{i.id_Ticket}}">{{i.numero}}</button>
+                    {% elif i.abonado %}
+                        <button onclick="mostrarFormularioAbono(this, '{{i.id_Ticket}}', '{{i.numero}}', '{{i.id_Comprador.nom_Apellidos_com}}', '{{i.id_Comprador.cedula}}', '{{i.id_Comprador.telefono}}', '{{i.id_Comprador.direccion}}', '{{i.total_Pagado}}', '{{i.deuda}}','{{i.comprado}}')" class="btn btn-warning btn-mini w-100" id="ticket-{{i.id_Ticket}}">{{i.numero}}</button>
+                    {% else %}
+                        <button onclick="enviarDatos(this, '{{i.id_Ticket}}', '{{i.comprado}}', '{{i.numero}}')" class="btn btn-success btn-mini w-100" id="ticket-{{i.id_Ticket}}">{{i.numero}}</button>
+                    {% endif %}
+                </div>
+            {% endfor%}
+        </div>
+
+        <div>       
+            <h2>Seleccionado:<span id="ticket-seleccionado"></span></h2>
+        </div>
+
+        
+        <form  class="mt-5" action="{% url 'crear_transaccion' %}" method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="mb-3 col-12 col-md-6">
+                    <label class="form-label">Nombres y Apellidos *</label>
+                    <input type="text" name="nombres_apellidos" class="form-control" >
+                </div>
+
+                <div class="mb-3 col-12 col-md-6">
+                    <label class="form-label">Cédula *</label>
+                    <input type="text" name="cedula" class="form-control">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="mb-3 col-12 col-md-6">
+                    <label class="form-label">Telefono *</label>
+                    <input type="text" name="telefono" class="form-control" >
+                </div>
+
+                <div class="mb-3 col-12 col-md-6">
+                    <label class="form-label">Dirección *</label>
+                    <input type="text" name="direccion" class="form-control">
+                </div>
+            </div>
+
+            <div class="row">
+
+                
+                <div class="mb-1 col-12 col-md-6">
+                    <label class="form-label">Tipo de abono *</label>
+                    <select class="form-select form-select-m " id="tipo_abono" name="tipo_abono">
+                        <option value="pago_completo">pago completo</option>
+                        <option value="abono">abono</option>
+                    </select>
+                </div>
+
+                <div class="mb-3 col-12 col-md-6">
+
+                    <label class="form-label">Tipo de pago *</label>
+                    <select class="form-select form-select-m " id="tipo_pago" name="tipo_pago">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="pago_movil">Pago móvil</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="mb-3 col-12 col-md-6">
+                    <label class="form-label">Monto *</label>
+                    <input type="number" name="monto" class="form-control" >
+                </div>
+            </div>
+
+            <input type="hidden" name="id_ticket" id="ticket_seleccionado_input">
+
+            <button type="submit" class="btn btn-primary">Enviar</button>
+            
+        </form>
+
+    </div>
+
+    <!-- Modal para mostrar información del ticket vendido -->
+    <div class="modal fade" id="infoTicketModal" tabindex="-1" aria-labelledby="infoTicketModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="infoTicketModalLabel">Información del Ticket #<span id="modal-ticket-numero"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Información del Comprador:</h6>
+                            <p><strong>Nombre:</strong> <span id="modal-nombre"></span></p>
+                            <p><strong>Cédula:</strong> <span id="modal-cedula"></span></p>
+                            <p><strong>Teléfono:</strong> <span id="modal-telefono"></span></p>
+                            <p><strong>Dirección:</strong> <span id="modal-direccion"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Información del Pago:</h6>
+                            <p><strong>Total Pagado:</strong> $<span id="modal-total-pagado"></span></p>
+                            <p><strong>Deuda Restante:</strong> $<span id="modal-deuda"></span></p>
+                            <p><strong>Estado:</strong> 
+                                <span id="modal-estado" class="badge bg-success">Pagado</span>
+                            </p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Historial de Transacciones:</h6>
+                    <div id="modal-transacciones">
+                        <!-- Aquí se cargarán las transacciones dinámicamente -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <!-- Modal para formulario de abono -->
+    <div class="modal fade" id="abonoModal" tabindex="-1" aria-labelledby="abonoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="abonoModalLabel">Nuevo Abono - Ticket #<span id="modalAbono-ticket-numero"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Información del Comprador:</h6>
+                            <p><strong>Nombre:</strong> <span id="modalAbono-nombre"></span></p>
+                            <p><strong>Cédula:</strong> <span id="modalAbono-cedula"></span></p>
+                            <p><strong>Teléfono:</strong> <span id="modalAbono-telefono"></span></p>
+                            <p><strong>Dirección:</strong> <span id="modalAbono-direccion"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Información del Pago:</h6>
+                            <p><strong>Total Pagado:</strong> $<span id="modalAbono-total-pagado"></span></p>
+                            <p><strong>Deuda Restante:</strong> $<span id="modalAbono-deuda"></span></p>
+                            <p><strong>Estado:</strong> 
+                                <span id="modalAbono-estado" class="badge bg-success">Pagado</span>
+                            </p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Historial de Transacciones:</h6>
+                    <div id="modalAbono-transacciones">
+                        <!-- Aquí se cargarán las transacciones dinámicamente -->
+                    </div>
+
+                    <hr>
+                    <form id="form-abono">
+                        {% csrf_token %}
+                        <input type="hidden" name="id_ticket" id="abono_ticket_id">
+                        <input type="hidden" name="tipo_abono" value="abono">
+
+                        <div class="mb-3">
+                            <label class="form-label">Monto del Abono *</label>
+                            <input type="number" name="monto" class="form-control" step="0.01" min="0.01" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Método de Pago *</label>
+                            <select name="tipo_pago" class="form-select" required>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="pago_movil">Pago móvil</option>
+                            </select>
+                        </div>
+                    </form>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="enviarAbono()">Realizar Abono</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para formulario de vender un nuevo ticket-->
+    <div class="modal fade" id="ventaTicketModal" tabindex="-1" aria-labelledby="abonoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="abonoModalLabel">Venta - Ticket #<span id="modalVenta-ticket-numero"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    
+                    <form id="form-venta">
+                        {% csrf_token %}
+                        <input type="hidden" name="id_ticket" id="venta_ticket_id">
+                        <!--<input type="hidden" name="tipo_abono" value="abono"> -->
+
+                        <div class="mb-3">
+                            <label class="form-label">Monto del Abono *</label>
+                            <input type="number" name="monto" class="form-control" step="0.01" min="0.01" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Método de Pago *</label>
+                            <select name="tipo_pago" class="form-select" required>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="pago_movil">Pago móvil</option>
+                            </select>
+                        </div>
+                    </form>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="enviarAbono()">Realizar Abono</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    
+
+{% endblock contenido%}
+
+
