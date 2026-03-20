@@ -73,7 +73,18 @@
             document.getElementById('ticket_seleccionado_input').value = idRifa;
         }
 
-        function mostrarInfoTicket(buttonElement, idTicket, numero, nombre, cedula, telefono, direccion, totalPagado, deuda, comprado) {
+        function mostrarFormularioVenta(buttonElement, idRifa, numero, precio) {        
+            // Llenar el modal con la información del ticket
+            document.getElementById('modalVenta-ticket-numero').textContent = numero;
+            document.getElementById('modalVenta-precio').textContent = precio;
+            document.getElementById('venta_ticket_id').value = idRifa;
+
+            // Mostrar el modal
+            const modal = new bootstrap.Modal(document.getElementById('ventaTicketModal'));
+            modal.show();
+        }
+
+        function mostrarInfoTicket(buttonElement, idTicket, numero, nombre, cedula, telefono, direccion, totalPagado, deuda, comprado,precio_ticket) {
             // Llenar el modal con la información del ticket
             document.getElementById('modal-ticket-numero').textContent = numero;
             document.getElementById('modal-nombre').textContent = nombre;
@@ -82,7 +93,8 @@
             document.getElementById('modal-direccion').textContent = direccion;
             document.getElementById('modal-total-pagado').textContent = totalPagado || '0.00';
             document.getElementById('modal-deuda').textContent = deuda || '0.00';
-            
+            document.getElementById('modal-ticket-precio').textContent = precio_ticket;
+
             // Actualizar estado
             const estadoElement = document.getElementById('modal-estado');
             //if (parseFloat(deuda) > 0) {
@@ -109,7 +121,7 @@
             modal.show();
         }
 
-        function mostrarFormularioAbono(buttonElement, idTicket, numero, nombre, cedula, telefono, direccion, totalPagado, deuda, comprado) {
+        function mostrarFormularioAbono(buttonElement, idTicket, numero, nombre, cedula, telefono, direccion, totalPagado, deuda, comprado,precio_ticket) {
             
         
 
@@ -123,6 +135,7 @@
             document.getElementById('modalAbono-total-pagado').textContent = totalPagado || '0.00';
             document.getElementById('modalAbono-deuda').textContent = deuda || '0.00';
             document.getElementById('abono_ticket_id').value = idTicket;
+            document.getElementById('modalAbono-ticket-precio').textContent = precio_ticket || '0.00';
 
             // Actualizar estado
             const estadoElement = document.getElementById('modalAbono-estado');
@@ -181,11 +194,80 @@
         }
 
         
-
         
+        function enviarTransaccion(formTipo) {
+            const nomModal = formTipo === 'form-venta' ? 'ventaTicketModal' : 'abonoModal';
+            const form = document.getElementById(formTipo);
+            const formData = new FormData(form);
+            
+            const tipo_Trans= formData.get('tipo_transaccion');
 
-        function enviarAbono() {
-            const form = document.getElementById('form-abono');
+            // Validar que el monto sea válido
+            const monto = parseFloat(formData.get('monto'));
+            if (isNaN(monto) || monto <= 0) {
+                alert('Por favor ingrese un monto válido mayor a 0');
+                return;
+            }
+
+            if (tipo_Trans === 'abono') {
+
+                //modal="abonoModal";
+                // Validar que el monto no exceda la deuda
+                const deudaRestante = parseFloat(document.getElementById('modalAbono-deuda').textContent);
+                if (monto > deudaRestante) {
+                    alert('El monto del abono no puede ser mayor a la deuda restante');
+                    return;
+                }   
+            } else if (tipo_Trans === 'venta') {
+
+                //modal="ventaTicketModal";
+                // Validar que el monto no exceda el precio del ticket
+                const precioTicket = parseFloat(document.getElementById('modalVenta-precio').textContent);
+                if (monto > precioTicket) {
+                    alert('El monto de la venta no puede ser mayor al precio del ticket');
+                    return;
+                }
+            }
+            
+
+            // Mostrar indicador de carga
+            const submitBtn = document.querySelector('#ventaTicketModal .btn-primary');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Procesando...';
+            submitBtn.disabled = true;
+
+
+            
+            // Enviar el formulario
+            fetch('{% url "crear_transaccion" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Cerrar modal y recargar página
+                    const modal = bootstrap.Modal.getInstance(document.getElementById(nomModal));
+                    modal.hide();
+                    location.reload();
+                    alert('Transacción realizada con éxito');
+                } else {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al procesar la transacción. Intente nuevamente.');
+                // Restaurar botón
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        }
+
+        function enviarAbono(formTipo) {
+            const form = document.getElementById(formTipo);
             const formData = new FormData(form);
             
             // Validar que el monto sea válido
@@ -194,13 +276,17 @@
                 alert('Por favor ingrese un monto válido mayor a 0');
                 return;
             }
+
+            if (formTipo === 'form-abono') {
+                // Validar que el monto no exceda la deuda
+                const deudaRestante = parseFloat(document.getElementById('modalAbono-deuda').textContent);
+                if (monto > deudaRestante) {
+                    alert('El monto del abono no puede ser mayor a la deuda restante');
+                    return;
+                }   
+            } 
             
-            // Validar que el monto no exceda la deuda
-            const deudaRestante = parseFloat(document.getElementById('modalAbono-deuda').textContent);
-            if (monto > deudaRestante) {
-                alert('El monto del abono no puede ser mayor a la deuda restante');
-                return;
-            }
+            
             
             // Mostrar indicador de carga
             const submitBtn = document.querySelector('#abonoModal .btn-primary');

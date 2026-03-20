@@ -86,33 +86,33 @@ class Transaccion(models.Model):
     metodo_Pago=models.CharField(max_length=50,null=False)
 
 
-    def save(self, *args, **kwargs):
+    #def save(self, *args, **kwargs):
 
         # Guarda la transacción primero
-        super().save(*args, **kwargs)
+        #super().save(*args, **kwargs)
         
         # Luego actualiza el Ticket con la información de la venta
-        ticket = self.id_Ticket
+        #ticket = self.id_Ticket
         
         # Actualiza el comprador del ticket si aún no lo tiene
-        if ticket.id_Comprador is None:
-            ticket.id_Comprador = self.id_Comprador
+        #if ticket.id_Comprador is None:
+        #    ticket.id_Comprador = self.id_Comprador
         
         # Actualiza vendedor
-        ticket.id_Vendedor = self.id_Vendedor
+        #ticket.id_Vendedor = self.id_Vendedor
         
         # Actualiza monto pagado y deuda
-        if self.tipo_Abono == "pago_completo":
-            ticket.total_Pagado = self.monto
-            ticket.deuda = 0
-            ticket.comprado = True
-            ticket.abonado = False
-        else:  # Es un abono
-            ticket.total_Pagado = (ticket.total_Pagado or 0) + Decimal(self.monto)
-            ticket.deuda = ticket.precio_ticket - ticket.total_Pagado
-            ticket.abonado = True
-            if ticket.deuda <= 0:
-                ticket.comprado = True
-                ticket.abonado = False
+        #if self.tipo_Abono == "pago_completo":
+            #ticket.total_Pagado = self.monto
+            #   ticket.deuda = 0
+           # ticket.comprado = True
+           # ticket.abonado = False
+        #else:  # Es un abono
+        #    ticket.total_Pagado = (ticket.total_Pagado or 0) + Decimal(self.monto)
+        #    ticket.deuda = ticket.precio_ticket - ticket.total_Pagado
+        #    ticket.abonado = True
+        #    if ticket.deuda <= 0:
+        #        ticket.comprado = True
+        #        ticket.abonado = False
         
-        ticket.save()
+        #ticket.save()
