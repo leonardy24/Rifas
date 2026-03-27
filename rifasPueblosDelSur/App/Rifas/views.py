@@ -183,7 +183,30 @@ def obtener_transacciones_ticket(request, ticket_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-          
+
+def crear_rifa(request):
+    if request.method == 'POST':
+        
+        try:
+                Rifa.objects.create(
+                        Nom_rifa=request.POST.get('Nom_rifa'),
+                        cant_tickets=int(request.POST.get('cant_tickets')),
+                        fecha_Sorteo=request.POST.get('fecha_Sorteo'),
+                        premio=request.POST.get('premio'),
+                        lote_rige=request.POST.get('lote_rige'),
+                        precio_ticket=request.POST.get('precio_ticket'),
+                        estado_rifa=request.POST.get('estado_rifa')
+                )
+                
+
+               
+                return JsonResponse({'status': 'success'}, status=200)
+                
+        except Exception as e:
+            
+                return JsonResponse({'error': str(e)}, status=500)
+            
+    return render(request, 'crear_rifa.html')          
 
 
                 

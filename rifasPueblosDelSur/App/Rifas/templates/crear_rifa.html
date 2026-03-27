@@ -1,0 +1,181 @@
+{% extends 'plantilla.html' %}
+
+{% block contenido %}
+<div class="container" style="margin-top:120px; max-width:700px;">
+    <h2>Crear nueva Rifa</h2>
+
+    <div id="error-alert" class="alert alert-danger" role="alert" style="display: none;">
+        <span id="error-message"></span>
+    </div>
+
+    <form id="crear-rifa-form" onsubmit="return false;">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label" for="Nom_rifa">Nombre de la Rifa</label>
+            <input type="text" class="form-control" id="Nom_rifa" name="Nom_rifa" value="{{ data.Nom_rifa|default_if_none:'' }}" required>
+            <div class="invalid-feedback" id="error-Nom_rifa"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="cant_tickets">Cantidad de Tickets</label>
+            <input type="number" class="form-control" id="cant_tickets" name="cant_tickets" min="1" value="{{ data.cant_tickets|default_if_none:'' }}" required>
+            <div class="invalid-feedback" id="error-cant_tickets"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="fecha_Sorteo">Fecha de Sorteo</label>
+            <input type="date" class="form-control" id="fecha_Sorteo" name="fecha_Sorteo" value="{{ data.fecha_Sorteo|default_if_none:'' }}" required>
+            <div class="invalid-feedback" id="error-fecha_Sorteo"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="premio">Premio</label>
+            <input type="text" class="form-control" id="premio" name="premio" value="{{ data.premio|default_if_none:'' }}" required>
+            <div class="invalid-feedback" id="error-premio"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="lote_rige">Lote rige</label>
+            <input type="text" class="form-control" id="lote_rige" name="lote_rige" value="{{ data.lote_rige|default_if_none:'' }}" required>
+            <div class="invalid-feedback" id="error-lote_rige"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="precio_ticket">Precio del Ticket</label>
+            <input type="number" class="form-control" id="precio_ticket" name="precio_ticket" step="0.01" min="0" value="{{ data.precio_ticket|default_if_none:'' }}" required>
+            <div class="invalid-feedback" id="error-precio_ticket"></div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="estado_rifa">Estado de la Rifa</label>
+            <input type="text" class="form-control" id="estado_rifa" name="estado_rifa" value="{{ data.estado_rifa|default_if_none:'' }}" required>
+            <div class="invalid-feedback" id="error-estado_rifa"></div>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="validarYEnviarRifa()">Guardar Rifa</button>
+        <a href="{% url 'inicio_rifa' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+
+<script>
+function validarYEnviarRifa() {
+    // Limpiar errores previos
+    document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+    document.querySelectorAll('.form-control').forEach(el => el.classList.remove('is-invalid'));
+    document.getElementById('error-alert').style.display = 'none';
+
+    let errores = {};
+    let esValido = true;
+
+    // Validar nombre de la rifa
+    const nomRifa = document.getElementById('Nom_rifa').value.trim();
+    if (!nomRifa) {
+        errores.Nom_rifa = 'El nombre de la rifa es obligatorio';
+        esValido = false;
+    } else if (nomRifa.length < 3) {
+        errores.Nom_rifa = 'El nombre debe tener al menos 3 caracteres';
+        esValido = false;
+    }
+
+    // Validar cantidad de tickets
+    const cantTickets = document.getElementById('cant_tickets').value;
+    if (!cantTickets || cantTickets < 1) {
+        errores.cant_tickets = 'La cantidad de tickets debe ser mayor a 0';
+        esValido = false;
+    } else if (cantTickets > 10000) {
+        errores.cant_tickets = 'La cantidad máxima de tickets es 10,000';
+        esValido = false;
+    }
+
+    // Validar fecha de sorteo
+    const fechaSorteo = document.getElementById('fecha_Sorteo').value;
+    if (!fechaSorteo) {
+        errores.fecha_Sorteo = 'La fecha de sorteo es obligatoria';
+        esValido = false;
+    } else {
+        const fechaActual = new Date();
+        const fechaSeleccionada = new Date(fechaSorteo);
+        if (fechaSeleccionada <= fechaActual) {
+            errores.fecha_Sorteo = 'La fecha de sorteo debe ser futura';
+            esValido = false;
+        }
+    }
+
+    // Validar premio
+    const premio = document.getElementById('premio').value.trim();
+    if (!premio) {
+        errores.premio = 'El premio es obligatorio';
+        esValido = false;
+    }
+
+    // Validar lote rige
+    const loteRige = document.getElementById('lote_rige').value.trim();
+    if (!loteRige) {
+        errores.lote_rige = 'El lote rige es obligatorio';
+        esValido = false;
+    }
+
+    // Validar precio del ticket
+    const precioTicket = document.getElementById('precio_ticket').value;
+    if (!precioTicket || parseFloat(precioTicket) <= 0) {
+        errores.precio_ticket = 'El precio del ticket debe ser mayor a 0';
+        esValido = false;
+    }
+
+    // Validar estado de la rifa
+    const estadoRifa = document.getElementById('estado_rifa').value.trim();
+    if (!estadoRifa) {
+        errores.estado_rifa = 'El estado de la rifa es obligatorio';
+        esValido = false;
+    }
+
+    // Mostrar errores si existen
+    if (!esValido) {
+        for (const [campo, mensaje] of Object.entries(errores)) {
+            const errorElement = document.getElementById(`error-${campo}`);
+            const inputElement = document.getElementById(campo);
+            if (errorElement && inputElement) {
+                errorElement.textContent = mensaje;
+                inputElement.classList.add('is-invalid');
+            }
+        }
+        return;
+    }
+
+    // Si todo es válido, enviar con fetch
+    const form = document.getElementById('crear-rifa-form');
+    const formData = new FormData(form);
+
+    // Mostrar indicador de carga
+    const submitBtn = document.querySelector('.btn-primary');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Guardando...';
+    submitBtn.disabled = true;
+
+    fetch('{% url "crear_rifa" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Redirigir a la página de inicio
+            alert('Transacción realizada con éxito');
+            window.location.href = '{% url "inicio_rifa" %}';
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Error al crear la rifa');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('error-message').textContent = error.message || 'Error al crear la rifa. Intente nuevamente.';
+        document.getElementById('error-alert').style.display = 'block';
+
+        // Restaurar botón
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+
+        // Scroll al inicio para mostrar el error
+        window.scrollTo(0, 0);
+    });
+}
+
+</script>
+{% endblock %}
