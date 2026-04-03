@@ -1,6 +1,6 @@
 from decimal import Decimal
 from django.db import models
-
+from django.contrib.auth.models import User
 # Create your models here.
 #AQUI CREAMOS LAS TABLAS DE BASE DE DATO, DJANGO YA TIENE UN ORM, ENTONCE AQUI LO QUE HACEMOS
 #ES CREAR DIRECTAMENTE LAS CLASES QUE SE MAPEARAN EN LA BASE DE DATOS
@@ -66,7 +66,7 @@ class Ticket(models.Model):
     comprado=models.BooleanField(default=False)
     abonado=models.BooleanField(default=False)
     id_Comprador=models.ForeignKey('Comprador',on_delete=models.SET_NULL, null=True, blank=True )
-    id_Vendedor=models.ForeignKey('Vendedor',on_delete=models.SET_NULL, null=True, blank=True )
+    id_Vendedor=models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     precio_ticket=models.DecimalField(max_digits=10, decimal_places=2,null=False)
     total_Pagado=models.DecimalField(max_digits=10, decimal_places=2,null=True) #no estoy muy seguro que se implementaria esto
     deuda=models.DecimalField(max_digits=10, decimal_places=2,null=True)
@@ -78,7 +78,7 @@ class Ticket(models.Model):
 class Transaccion(models.Model):
     id_Trans=models.AutoField(primary_key=True)
     id_Ticket=models.ForeignKey('Ticket',on_delete=models.CASCADE,related_name="trans_ticket")
-    id_Vendedor=models.ForeignKey('Vendedor',on_delete=models.SET_NULL, null=True, blank=True,related_name="trans_vendedor")
+    id_Vendedor=models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     id_Comprador=models.ForeignKey('Comprador',on_delete=models.SET_NULL, null=True, blank=True,related_name="trans_comprador")
     monto=models.DecimalField(max_digits=10, decimal_places=2,null=False)
     tipo_Abono=models.CharField(max_length=50,null=False)#abono o pago completo

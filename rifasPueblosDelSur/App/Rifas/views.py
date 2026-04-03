@@ -3,9 +3,12 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from .models import Rifa, Ticket, Comprador, Vendedor, Transaccion
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
 # Create your views here.
 #AQUI ES DONDE INDICAMOS QUE SE CARGUEN NUESTRO HTML DE TEMPLATE
 
+@login_required(login_url='/login/')
 def inicio(request):
 
         rifasDBB= Rifa.objects.all()
@@ -17,18 +20,54 @@ def inicio(request):
         })
 
 
+@login_required(login_url='/login/')
 def detalle_rifa(request, id):
         
         rifa = Rifa.objects.get(id_rifa=id)
 
-        #tickets = range(1, rifa.cant_tickets + 1)
+        transacciones = Transaccion.objects.filter(
+                id_Ticket__id_Rifa=rifa.id_rifa,
+                id_Vendedor__isnull=False
+        )
+
+        # Monto total por vendedor (o usuario responsable)
+        dinero_por_vendedor = (
+                transacciones
+                .values('id_Vendedor__username')
+                .annotate(total=Sum('monto'))
+        )
+
+        labels_dinero = []
+        data_dinero = []
+        dinero_por_usuario = []
+
+        for item in dinero_por_vendedor:
+                        label_vendedor = item.get('id_Vendedor__username') or 'Desconocido'
+                        labels_dinero.append(label_vendedor)
+                        data_dinero.append(float(item['total'] or 0))
+                        dinero_por_usuario.append({
+                                'label': label_vendedor,
+                                'total': float(item['total'] or 0)
+                        })
 
         tickets = Ticket.objects.filter(id_Rifa=rifa.id_rifa)
+        vendidos = tickets.filter(comprado=True).count()
+        abonados = tickets.filter(abonado=True).count()
+        disponibles = tickets.count() - vendidos - abonados
         return render(request, 'detalle_rifa.html', {
                 #"rifaDeta":rifa
                 "tickets": tickets
+                ,"vendidos": vendidos
+                ,"abonados": abonados
+                ,"disponibles": disponibles
+                ,"rifa": rifa
+                ,"labels_dinero": labels_dinero
+                ,"data_dinero": data_dinero
+                ,"dinero_por_usuario": dinero_por_usuario
         })
 
+
+@login_required(login_url='/login/')
 def crear_transaccion(request):
 
         #tengo dos tipos de implementaciones, tanto en el metodo de guardas de models.py,
@@ -56,7 +95,7 @@ def crear_transaccion(request):
 
                                         Transaccion.objects.create(
                                                 id_Comprador= ticket.id_Comprador, #Obtenemos el comprador del ticket, ya que el abono se hace sobre un ticket que ya tiene comprador asignado
-                                                id_Vendedor=Vendedor.objects.get(id_vendedor=1), #ID DEL VENDEDOR FIJO,
+                                                id_Vendedor=request.user, #ID DEL VENDEDOR FIJO,
                                                 id_Ticket=ticket,
                                                 monto=request.POST.get('monto'),
                                                 metodo_Pago=request.POST.get('tipo_pago'),
@@ -72,7 +111,7 @@ def crear_transaccion(request):
 
                                         Transaccion.objects.create(
                                                 id_Comprador= ticket.id_Comprador, #Obtenemos el comprador del ticket, ya que el abono se hace sobre un ticket que ya tiene comprador asignado
-                                                id_Vendedor=Vendedor.objects.get(id_vendedor=1), #ID DEL VENDEDOR FIJO,
+                                                id_Vendedor=request.user, #ID DEL VENDEDOR FIJO,
                                                 id_Ticket=ticket,
                                                 monto=request.POST.get('monto'),
                                                 metodo_Pago=request.POST.get('tipo_pago'),
@@ -122,7 +161,7 @@ def crear_transaccion(request):
                                 #primero guardo la transaccion, y luego actualizo el estado del ticket.
                                 Transaccion.objects.create(
                                         id_Comprador= comprador,
-                                        id_Vendedor=Vendedor.objects.get(id_vendedor=1), #ID DEL VENDEDOR FIJO,
+                                        id_Vendedor=request.user, #ID DEL VENDEDOR FIJO,
                                         id_Ticket=ticket,
                                         monto=request.POST.get('monto'),
                                         metodo_Pago=request.POST.get('tipo_pago'),
@@ -132,7 +171,7 @@ def crear_transaccion(request):
                                 ticket.id_Comprador = comprador
 
                                 #Actualizamos el vendedor del ticket
-                                ticket.id_Vendedor = Vendedor.objects.get(id_vendedor=1)
+                                ticket.id_Vendedor = request.user
 
                                 if tipoAbono == "completo":
                                         # Si el monto es igual al precio del ticket, marcarlo como comprado
@@ -160,6 +199,7 @@ def crear_transaccion(request):
         
 
 
+@login_required(login_url='/login/')
 def obtener_transacciones_ticket(request, ticket_id):
     """Vista API para obtener las transacciones de un ticket específico"""
     try:
@@ -174,7 +214,7 @@ def obtener_transacciones_ticket(request, ticket_id):
                 'monto': str(trans.monto),
                 'tipo_abono': trans.tipo_Abono,
                 'metodo_pago': trans.metodo_Pago,
-                'vendedor': trans.id_Vendedor.nom_Apellidos_vend if trans.id_Vendedor else 'N/A'
+                'vendedor': trans.id_Vendedor.username
             })
         
         return JsonResponse(data, safe=False)
@@ -184,9 +224,11 @@ def obtener_transacciones_ticket(request, ticket_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@login_required(login_url='/login/')
 def crear_rifa(request):
     if request.method == 'POST':
         
+
         try:
                 Rifa.objects.create(
                         Nom_rifa=request.POST.get('Nom_rifa'),

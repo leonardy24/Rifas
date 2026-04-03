@@ -120,3 +120,5 @@ STATIC_URL = '/static/'
 
 STATICFILES_DIRS = (os.path.join(BASE_DIR, 'rifasPueblosDelSur/static'), )
 
+LOGIN_REDIRECT_URL = '/'  # Redirige al inicio después de iniciar sesión
+LOGOUT_REDIRECT_URL = '/login/'  # Redirige al inicio después de cerrar sesión

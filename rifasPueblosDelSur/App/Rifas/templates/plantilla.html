@@ -10,6 +10,9 @@
     <title>Rps</title>
     <!-- Bootstrap CSS -->
      <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+     <!-- donas -->
+     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <link rel="stylesheet" href="{% static 'css/style.css' %}"/>
 </head>
@@ -22,6 +25,11 @@
             <button class="btn btn-dark" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="" aria-label="Toggle navigation">
                 ☰
             </button>
+
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-dark">Logout</button>
+            </form>
 
             <div class="offcanvas  offcanvas-start  bg-dark" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
                 <div class="offcanvas-header bg-dark">
@@ -48,12 +56,113 @@
     <main>
         
         {% block contenido %}{% endblock contenido%}
+        {% if labels_dinero is not None %}{{ labels_dinero|json_script:"labels_dinero_data" }}{% endif %}
+        {% if data_dinero is not None %}{{ data_dinero|json_script:"data_dinero_data" }}{% endif %}
         
     </main>
 
     <script>
 
-        function enviarDatos(buttonElement,idRifa, comprado,numero ) {
+
+    // Si existe un canvas grafico-ventas en el template actual, no inicializamos el gráfico aleatorio aquí.
+    const graficoCanvas = document.getElementById('grafico-ventas');
+    
+    if (graficoCanvas) {
+        // El script del template específico (detalle_rifa.html) crea el gráfico con datos reales.
+        document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('grafico-ventas');
+        if (!ctx) return;
+
+        const dataValores = [
+            Number('{{ vendidos|default:0 }}'),
+            Number('{{ abonados|default:0 }}'),
+            Number('{{ disponibles|default:0 }}')
+        ];
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Vendidos', 'Abonados', 'Disponibles'],
+                datasets: [{
+                    data: dataValores,
+                    backgroundColor: ['#6c757d', '#ffc107', '#198754'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = dataValores.reduce((a, b) => a + b, 0);
+                                const value = context.parsed;
+                                const percent = total ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${context.label}: ${value} (${percent}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    });
+    }
+
+    const graficoUsuariosCanvas = document.getElementById('grafico-usuarios');
+
+    const labelsDineroNode = document.getElementById('labels_dinero_data');
+    const dataDineroNode = document.getElementById('data_dinero_data');
+    const labelsDinero = labelsDineroNode ? JSON.parse(labelsDineroNode.textContent) : [];
+    const dataDinero = dataDineroNode ? JSON.parse(dataDineroNode.textContent) : [];
+    
+    console.log('Labels Dinero:', labelsDinero);
+    console.log('Data Dinero:', dataDinero);
+    if (graficoUsuariosCanvas) {
+        // El script del template específico (detalle_rifa.html) crea el gráfico con datos reales.
+        document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('grafico-usuarios');
+        if (!ctx) return;
+
+        const dataValores = dataDinero;
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labelsDinero,
+                datasets: [{
+                    data: dataDinero,
+                    backgroundColor: ['#6c757d', '#ffc107', '#198754'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = dataValores.reduce((a, b) => a + b, 0);
+                                const value = context.parsed;
+                                const percent = total ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${context.label}: ${value} (${percent}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    });
+    }
+
+    function enviarDatos(buttonElement,idRifa, comprado,numero ) {
             
             // Si YA está seleccionado → lo deseleccionamos
             if (buttonElement.classList.contains('seleccionado')) {
@@ -94,7 +203,7 @@
             document.getElementById('modal-total-pagado').textContent = totalPagado || '0.00';
             document.getElementById('modal-deuda').textContent = deuda || '0.00';
             document.getElementById('modal-ticket-precio').textContent = precio_ticket;
-
+            
             // Actualizar estado
             const estadoElement = document.getElementById('modal-estado');
             //if (parseFloat(deuda) > 0) {
@@ -174,7 +283,8 @@
                                 <div>
                                     <small class="text-muted">${trans.fecha}</small><br>
                                     <strong>Id:</strong> ${trans.id}<br>
-                                    <strong>${trans.tipo_abono}</strong> - $${trans.monto}
+                                    <strong>${trans.tipo_abono}</strong> - $${trans.monto}<br>
+                                    <strong>Vendedor:</strong> ${trans.vendedor}
                                 </div>
                                 <span class="badge bg-primary">${trans.metodo_pago}</span>
                             </li>`;

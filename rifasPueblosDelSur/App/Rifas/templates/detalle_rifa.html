@@ -24,14 +24,33 @@
         </div>
 
         
-        <!-- prueba de rama MOD-001 -->
+        <div style="display: flex; justify-content: center; gap: 80px; flex-wrap: wrap; margin-top: 30px;">
 
-        <!-- prueba de rama- SEGUNDO CAMBIO MOD-001 -->
-        <!-- prueba de rama- 3 CAMBIO MOD-001 -->
+            <div style="max-width:400px; border:1px solid #ccc; padding:10px;">
+                <h5>Gráfico de Ventas</h5>
+                <p><strong>Vendidos:</strong> {{ vendidos }} &nbsp;
+                    <strong>Abonados:</strong> {{ abonados }} &nbsp;
+                    <strong>Disponibles:</strong> {{ disponibles }}
+                </p>
+                <canvas id="grafico-ventas"></canvas>
+            </div>
 
+            <div style="max-width:400px; border:1px solid #ccc; padding:10px;">
+                <h5>Gráfico de Usuarios</h5>
+                <p>
+                    {% if dinero_por_usuario %}
+                        {% for usuario in dinero_por_usuario %}
+                            <strong>{{ usuario.label }}:</strong> {{ usuario.total }} &nbsp;
+                        {% endfor %}
+                    {% else %}
+                        Sin registros de dinero por usuario
+                    {% endif %}
+                </p>
+                <canvas id="grafico-usuarios"></canvas>
+            </div>
 
+        </div>
 
-        <!-- Prueba rama MAIN-->
     </div>
 
     <!-- Modal para mostrar información del ticket vendido -->
@@ -200,5 +219,9 @@
     
 
 {% endblock contenido%}
+
+<script>
+    
+</script>
 
 
