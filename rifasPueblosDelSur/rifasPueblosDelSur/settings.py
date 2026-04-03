@@ -27,7 +27,7 @@ SECRET_KEY = config("SECRET_KEY")
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -130,7 +130,7 @@ STATIC_URL = '/static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static'), )
+STATICFILES_DIRS = (os.path.join(BASE_DIR, 'rifasPueblosDelSur/static'), )
 
 LOGIN_REDIRECT_URL = '/'  # Redirige al inicio después de iniciar sesión
 LOGOUT_REDIRECT_URL = '/login/'  # Redirige al inicio después de cerrar sesión
