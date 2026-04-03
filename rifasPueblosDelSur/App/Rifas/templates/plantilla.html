@@ -56,12 +56,18 @@
     <main>
         
         {% block contenido %}{% endblock contenido%}
-        {% if labels_dinero is not None %}{{ labels_dinero|json_script:"labels_dinero_data" }}{% endif %}
-        {% if data_dinero is not None %}{{ data_dinero|json_script:"data_dinero_data" }}{% endif %}
+        {% if labels_dinero is not None %}
+            {{ labels_dinero|json_script:"labels_dinero_data" }}
+        {% endif %}
+        {% if data_dinero is not None %}
+            {{ data_dinero|json_script:"data_dinero_data" }}
+        {% endif %}
         
     </main>
 
     <script>
+
+        
 
 
     // Si existe un canvas grafico-ventas en el template actual, no inicializamos el gráfico aleatorio aquí.
@@ -182,7 +188,11 @@
             document.getElementById('ticket_seleccionado_input').value = idRifa;
         }
 
-        function mostrarFormularioVenta(buttonElement, idRifa, numero, precio) {        
+        function mostrarFormularioVenta(buttonElement, idRifa, numero, precio) {  
+            
+            
+
+            buttonElement.disabled=true;
             // Llenar el modal con la información del ticket
             document.getElementById('modalVenta-ticket-numero').textContent = numero;
             document.getElementById('modalVenta-precio').textContent = precio;
@@ -431,6 +441,11 @@
             });
         }
 
+        document.getElementById('ventaTicketModal')
+            .addEventListener('hidden.bs.modal', function () {
+                location.reload();
+            });
+       
 
     </script>
 </body>

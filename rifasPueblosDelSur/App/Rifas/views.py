@@ -4,9 +4,24 @@ from django.http import JsonResponse
 from .models import Rifa, Ticket, Comprador, Vendedor, Transaccion
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 from django.db.models import Sum
+from django.db import transaction
+
 # Create your views here.
 #AQUI ES DONDE INDICAMOS QUE SE CARGUEN NUESTRO HTML DE TEMPLATE
+class CustomLoginForm(AuthenticationForm):
+       username=forms.CharField(widget=forms.TextInput(
+              attrs={'class':'form-control', 'placeholder': 'Usuario'}),
+                label='Usuario'
+        )
+
+       password= forms.CharField(widget=forms.PasswordInput(
+              attrs={'class':'form-control', 'placeholder':'Contraseña'}),
+                label='Contraseña'
+        )
+
 
 @login_required(login_url='/login/')
 def inicio(request):
@@ -76,124 +91,133 @@ def crear_transaccion(request):
         
         if request.method == 'POST':
 
-                modal = request.POST.get('tipo_transaccion')  # 'abono' o 'venta'
-                print("TIPO DE TRANSACCION: ", modal)
-                # Obtener el ticket
-                ticket = Ticket.objects.get(id_Ticket=request.POST.get('id_ticket'))
+                with transaction.atomic():
 
+                        modal = request.POST.get('tipo_transaccion')  # 'abono' o 'venta'
+                        print("TIPO DE TRANSACCION: ", modal)
+                        # Obtener el ticket
+                        #ticket = Ticket.objects.get(id_Ticket=request.POST.get('id_ticket'))
 
-                if modal=='abono':
+                        #bloqueamos el ticket para nadie mas puede modificarlo
+                        ticket = Ticket.objects.select_for_update().get(id_Ticket=request.POST.get('id_ticket'))
+
+                        if ticket.comprado:
+                               return JsonResponse({
+                                      "error": "ticket vendido"
+                               },status=400)
+
+                        if modal=='abono':
                         
-                        print("ENTRO AL ABONO MODAL")
+                                print("ENTRO AL ABONO MODAL")
 
-                        try:
-                                monto = Decimal(request.POST.get('monto'))
+                                try:
+                                        monto = Decimal(request.POST.get('monto'))
 
-                                if ticket.total_Pagado + monto == ticket.precio_ticket:
+                                        if ticket.total_Pagado + monto == ticket.precio_ticket:
                                         
-                                        #Es un pago completo
+                                                #Es un pago completo
 
-                                        Transaccion.objects.create(
-                                                id_Comprador= ticket.id_Comprador, #Obtenemos el comprador del ticket, ya que el abono se hace sobre un ticket que ya tiene comprador asignado
-                                                id_Vendedor=request.user, #ID DEL VENDEDOR FIJO,
-                                                id_Ticket=ticket,
-                                                monto=request.POST.get('monto'),
-                                                metodo_Pago=request.POST.get('tipo_pago'),
-                                                tipo_Abono="completo")
+                                                Transaccion.objects.create(
+                                                        id_Comprador= ticket.id_Comprador, #Obtenemos el comprador del ticket, ya que el abono se hace sobre un ticket que ya tiene comprador asignado
+                                                        id_Vendedor=request.user, #ID DEL VENDEDOR FIJO,
+                                                        id_Ticket=ticket,
+                                                        monto=request.POST.get('monto'),
+                                                        metodo_Pago=request.POST.get('tipo_pago'),
+                                                        tipo_Abono="completo")
                         
 
-                                        ticket.comprado = True
-                                        ticket.abonado = False
-                                        ticket.total_Pagado += monto
-                                        ticket.deuda = 0
+                                                ticket.comprado = True
+                                                ticket.abonado = False
+                                                ticket.total_Pagado += monto
+                                                ticket.deuda = 0
                                 
-                                else : #Es un abono
+                                        else : #Es un abono
 
+                                                Transaccion.objects.create(
+                                                        id_Comprador= ticket.id_Comprador, #Obtenemos el comprador del ticket, ya que el abono se hace sobre un ticket que ya tiene comprador asignado
+                                                        id_Vendedor=request.user, #ID DEL VENDEDOR FIJO,
+                                                        id_Ticket=ticket,
+                                                        monto=request.POST.get('monto'),
+                                                        metodo_Pago=request.POST.get('tipo_pago'),
+                                                        tipo_Abono="abono")
+                                        
+                                                ticket.comprado = False
+                                                ticket.abonado = True
+                                                ticket.total_Pagado += monto
+                                                ticket.deuda = ticket.precio_ticket - ticket.total_Pagado
+
+
+                                        ticket.save()
+
+                                        return JsonResponse({'status': 'success'}, status=200)
+                        
+                                except Ticket.DoesNotExist:
+                                        return JsonResponse({'error': 'Ticket no encontrado'}, status=404)
+                                except Exception as e:
+                                        print("ERROR: ", str(e))
+                                        return JsonResponse({'error': str(e)}, status=500)
+                        
+
+                        elif modal=='venta':
+                        
+                                try:
+                              
+                                        print("ENTRO AL VENTA MODAL")
+
+                                        # Si el comprador no existe se crea uno nuevo, si existe se obtiene el existente
+                                        comprador, creado = Comprador.objects.get_or_create(
+                                        cedula=request.POST.get('cedula'),
+                                        defaults={
+                                        'nom_Apellidos_com': request.POST.get('nombres_apellidos'),
+                                        'telefono': request.POST.get('telefono'),
+                                        'direccion': request.POST.get('direccion')
+                                        }   
+                                        )
+
+                                        monto = float(request.POST.get('monto'))
+                                        tipoAbono= ""
+
+                                        if monto == ticket.precio_ticket:
+                                                tipoAbono= "completo"
+                                        else:
+                                                tipoAbono= "abono"
+
+                                        #primero guardo la transaccion, y luego actualizo el estado del ticket.
                                         Transaccion.objects.create(
-                                                id_Comprador= ticket.id_Comprador, #Obtenemos el comprador del ticket, ya que el abono se hace sobre un ticket que ya tiene comprador asignado
+                                                id_Comprador= comprador,
                                                 id_Vendedor=request.user, #ID DEL VENDEDOR FIJO,
                                                 id_Ticket=ticket,
                                                 monto=request.POST.get('monto'),
                                                 metodo_Pago=request.POST.get('tipo_pago'),
-                                                tipo_Abono="abono")
-                                        
-                                        ticket.comprado = False
-                                        ticket.abonado = True
-                                        ticket.total_Pagado += monto
-                                        ticket.deuda = ticket.precio_ticket - ticket.total_Pagado
-
-
-                                ticket.save()
-
-                                return JsonResponse({'status': 'success'}, status=200)
+                                                tipo_Abono=tipoAbono)
                         
-                        except Ticket.DoesNotExist:
-                                return JsonResponse({'error': 'Ticket no encontrado'}, status=404)
-                        except Exception as e:
-                                print("ERROR: ", str(e))
-                                return JsonResponse({'error': str(e)}, status=500)
+                                        # Actualizamos el comprador del ticket
+                                        ticket.id_Comprador = comprador
+
+                                        #Actualizamos el vendedor del ticket
+                                        ticket.id_Vendedor = request.user
+
+                                        if tipoAbono == "completo":
+                                                # Si el monto es igual al precio del ticket, marcarlo como comprado
+                                                ticket.comprado = True
+                                                ticket.abonado = False
+                                                ticket.total_Pagado = monto
+                                                ticket.deuda = 0 
+                                        else: # Es un abono
+                                                ticket.comprado = False
+                                                ticket.abonado = True
+                                                ticket.total_Pagado = monto
+                                                ticket.deuda = ticket.precio_ticket - Decimal(monto)
+
+                                        ticket.save()
                         
-
-                elif modal=='venta':
+                                        return JsonResponse({'status': 'success'}, status=200)
                         
-                        try:
-                              
-                                print("ENTRO AL VENTA MODAL")
-
-                                # Si el comprador no existe se crea uno nuevo, si existe se obtiene el existente
-                                comprador, creado = Comprador.objects.get_or_create(
-                                cedula=request.POST.get('cedula'),
-                                defaults={
-                                    'nom_Apellidos_com': request.POST.get('nombres_apellidos'),
-                                    'telefono': request.POST.get('telefono'),
-                                    'direccion': request.POST.get('direccion')
-                                }   
-                                )
-
-                                monto = float(request.POST.get('monto'))
-                                tipoAbono= ""
-
-                                if monto == ticket.precio_ticket:
-                                        tipoAbono= "completo"
-                                else:
-                                        tipoAbono= "abono"
-
-                                #primero guardo la transaccion, y luego actualizo el estado del ticket.
-                                Transaccion.objects.create(
-                                        id_Comprador= comprador,
-                                        id_Vendedor=request.user, #ID DEL VENDEDOR FIJO,
-                                        id_Ticket=ticket,
-                                        monto=request.POST.get('monto'),
-                                        metodo_Pago=request.POST.get('tipo_pago'),
-                                        tipo_Abono=tipoAbono)
-                        
-                                # Actualizamos el comprador del ticket
-                                ticket.id_Comprador = comprador
-
-                                #Actualizamos el vendedor del ticket
-                                ticket.id_Vendedor = request.user
-
-                                if tipoAbono == "completo":
-                                        # Si el monto es igual al precio del ticket, marcarlo como comprado
-                                        ticket.comprado = True
-                                        ticket.abonado = False
-                                        ticket.total_Pagado = monto
-                                        ticket.deuda = 0 
-                                else: # Es un abono
-                                        ticket.comprado = False
-                                        ticket.abonado = True
-                                        ticket.total_Pagado = monto
-                                        ticket.deuda = ticket.precio_ticket - Decimal(monto)
-
-                                ticket.save()
-                        
-                                return JsonResponse({'status': 'success'}, status=200)
-                        
-                        except Ticket.DoesNotExist:
-                                return JsonResponse({'error': 'Ticket no encontrado'}, status=404)
-                        except Exception as e:
-                                print("ERROR: ", str(e))
-                                return JsonResponse({'error': str(e)}, status=500)
+                                except Ticket.DoesNotExist:
+                                        return JsonResponse({'error': 'Ticket no encontrado'}, status=404)
+                                except Exception as e:
+                                        print("ERROR: ", str(e))
+                                        return JsonResponse({'error': str(e)}, status=500)
 
         return HttpResponse(status=500)
         
